@@ -157,6 +157,6 @@ data/sbd/
 vid/
 vidres/
 
-labelbox_exports/Datasets
+dataset_utilities/Datasets
 
 _.py
