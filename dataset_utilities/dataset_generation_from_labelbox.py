@@ -50,24 +50,35 @@ if __name__ == '__main__':
             export_dataset(args['label_box_key'], dataset_name, dataset_path)
 
     # Read datasets and parse annotations
-    for dataset_name in dataset_structure:
+    file_manager = FileManager()
+    for idx, dataset_name in enumerate(dataset_structure):
         # Read annotations
         dataset_path = os.path.join(args['working_dir'], dataset_name)
-        file_manager = FileManager()
-        annotations = file_manager.read_and_transform(filename=os.path.join(dataset_path, 'annotations.json'), type=TypeLabelBox)
+        annotations = file_manager.read_and_transform(filename=os.path.join(dataset_path, 'annotations.json'),
+                                                      type=TypeLabelBox)
         trainvalratio = float(dataset_structure[dataset_name]['trainvalratio'])
         # Select indices based on train val ratio
         k = int(len(annotations['annotations']) * trainvalratio)
         idxs_train = random.sample(range(len(annotations['annotations'])), k)
         idxs_val = list(set(range(len(annotations['annotations']))).symmetric_difference(set(idxs_train)))
         # Split annotations
-        # TODO: Solve index bug and get a subset of dictionary properly
-        annotations_train = annotations
+        annotations_train = annotations.copy()
         annotations_train['annotations'] = dict(np.array(list(annotations['annotations'].items()))[idxs_train])
-        annotations_val = annotations
+        annotations_val = annotations.copy()
         annotations_val['annotations'] = dict(np.array(list(annotations['annotations'].items()))[idxs_val])
         # Write out annotations
-        file_manager.write_and_transform(annotations_train, TypeCoco, os.path.join(dataset_path, 'annotations_coco_train'))
+        file_manager.write_and_transform(annotations_train, TypeCoco,
+                                         os.path.join(dataset_path, 'annotations_coco_train'))
         file_manager.write_and_transform(annotations_val, TypeCoco, os.path.join(dataset_path, 'annotations_coco_val'))
+        # Compute joint annotations
+        if idx == 0:
+            joint_annotations_train = annotations.copy()  # Assuming same dataset format for all
+            joint_annotations_train['annotations'] = {}
+            joint_annotations_val = annotations.copy()
+            joint_annotations_val['annotations'] = {}
+        joint_annotations_train['annotations'].update(annotations_train['annotations'])
+        joint_annotations_val['annotations'].update(annotations_val['annotations'])
+    file_manager.write_and_transform(joint_annotations_train, TypeCoco, os.path.join(args['working_dir'], 'joint_annotations_coco_train'))
+    file_manager.write_and_transform(joint_annotations_val, TypeCoco, os.path.join(args['working_dir'], 'joint_annotations_coco_val'))
 
 # TODO: copy dataset to desired outputpath or just remove working directory and use output path for everything
