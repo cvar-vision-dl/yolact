@@ -1,4 +1,5 @@
 import argparse
+import json
 from datetime import datetime
 import os
 import random
@@ -33,6 +34,9 @@ if __name__ == '__main__':
     ap.add_argument("-sp", "--only-split",
                     help="Assuming datasets are stored in working dir, only split datasets",
                     action='store_true')
+    ap.add_argument("-lr", "--label-remap",
+                    help="Remap labels to other predefined categories in configuration",
+                    action='store_true')
 
     args = vars(ap.parse_args())
 
@@ -44,6 +48,10 @@ if __name__ == '__main__':
         'Copilot_paper_javier': {
             'trainvalratio': 0.9,
         }
+    }
+
+    label_remap = {
+        'cropped_panel': 'panel'
     }
 
     print(f"INFO: Labelbox datasets structure to split {dataset_structure}")
@@ -63,7 +71,8 @@ if __name__ == '__main__':
         # Read annotations
         dataset_path = os.path.join(args['working_dir'], dataset_name)
         annotations = file_manager.read_and_transform(filename=os.path.join(dataset_path, 'annotations.json'),
-                                                      type=TypeLabelBox)
+                                                      type=TypeLabelBox,
+                                                      label_remap=label_remap if args['label_remap'] else None)
         trainvalratio = float(dataset_structure[dataset_name]['trainvalratio'])
 
         # Filter annotations by suffix
@@ -92,6 +101,13 @@ if __name__ == '__main__':
             joint_annotations_train['annotations'] = {}
             joint_annotations_val = annotations.copy()
             joint_annotations_val['annotations'] = {}
+
+        # Check if a particular dataset has more labels than other one and unify
+        if len(annotations['categories']) > len(joint_annotations_train['categories']):
+            joint_annotations_train['categories'] = annotations['categories'].copy()
+        if len(annotations['categories']) > len(joint_annotations_val['categories']):
+            joint_annotations_val['categories'] = annotations['categories'].copy()
+
         joint_annotations_train['annotations'].update(annotations_train['annotations'])
         joint_annotations_val['annotations'].update(annotations_val['annotations'])
 
@@ -111,5 +127,14 @@ for dataset_name in dataset_structure:
     os.system(f"cp {os.path.join(os.path.join(args['working_dir'], dataset_name), '*' + args['suffix'] + '*.JPG')} {output_path} 2> /dev/null")
     os.system(f"cp {os.path.join(os.path.join(args['working_dir'], dataset_name), '*' + args['suffix'] + '*.png')} {output_path} 2> /dev/null")
     os.system(f"cp {os.path.join(os.path.join(args['working_dir'], dataset_name), '*' + args['suffix'] + '*.PNG')} {output_path} 2> /dev/null")
+
+split_info = {
+    'dataset_structure': dataset_structure,
+    'label_remap': label_remap if args['label_remap'] else None,
+    'suffix': args['suffix'] if args['suffix'] is not None else None
+}
+j = json.dumps(split_info, indent=4)
+with open(os.path.join(output_path, 'split_info.json'), 'w') as f:
+    print(j, file=f)
 
 print(f'INFO: Dataset copied  to {output_path}')
