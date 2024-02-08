@@ -497,6 +497,7 @@ coco_base_config = Config({
     'augment_random_flip': False,
     # With uniform probability, rotate the image [0,90,180,270] degrees
     'augment_random_rot90': False,
+    'augment_random_shear' : True,
 
     # Discard detections with width and height smaller than this (in absolute width and height)
     'discard_box_width': 4 / 550,
