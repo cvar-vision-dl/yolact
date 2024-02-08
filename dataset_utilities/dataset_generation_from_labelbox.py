@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import os
 import random
 import numpy as np
@@ -17,6 +18,9 @@ if __name__ == '__main__':
     ap.add_argument("-s", "--suffix", type=str,
                     help="suffix that images should contain [wide: _W, thermal: _T]",
                     default='_W')
+    ap.add_argument("-n", "--dataset-name", type=str,
+                    help="Output dataset name",
+                    default='generic-dataset')
     ap.add_argument("-f", "--format", type=str,
                     help="output format [coco]",
                     default='coco')
@@ -41,6 +45,8 @@ if __name__ == '__main__':
             'trainvalratio': 0.9,
         }
     }
+
+    print(f"Labelbox datasets structure to split {dataset_structure}")
 
     if not args['only_split']:
         # Downlaod datasets from label box
@@ -78,7 +84,21 @@ if __name__ == '__main__':
             joint_annotations_val['annotations'] = {}
         joint_annotations_train['annotations'].update(annotations_train['annotations'])
         joint_annotations_val['annotations'].update(annotations_val['annotations'])
+    print(f"INFO: Train dataset: {len(joint_annotations_train['annotations'])} images")
+    print(f"INFO: Val dataset: {len(joint_annotations_val['annotations'])} images")
     file_manager.write_and_transform(joint_annotations_train, TypeCoco, os.path.join(args['working_dir'], 'joint_annotations_coco_train'))
     file_manager.write_and_transform(joint_annotations_val, TypeCoco, os.path.join(args['working_dir'], 'joint_annotations_coco_val'))
 
-# TODO: copy dataset to desired outputpath or just remove working directory and use output path for everything
+# Copy dataset split to desired location
+output_path = os.path.join(args['output'], args['dataset_name'] + '-split-' + datetime.now().strftime('%Y%m%d%H%M'))
+print(f'INFO: Copying dataset to {output_path}')
+os.system(f"mkdir -p {output_path}")
+os.system(f"mv {os.path.join(args['working_dir'], 'joint_annotations_coco_train.json')} {os.path.join(output_path, 'joint_annotations_coco_train.json')}")
+os.system(f"mv {os.path.join(args['working_dir'], 'joint_annotations_coco_val.json')} {os.path.join(output_path, 'joint_annotations_coco_val.json')}")
+for dataset_name in dataset_structure:
+    os.system(f"mv {os.path.join(os.path.join(args['working_dir'], dataset_name), '*.jpg')} {output_path} 2> /dev/null")
+    os.system(f"mv {os.path.join(os.path.join(args['working_dir'], dataset_name), '*.JPG')} {output_path} 2> /dev/null")
+    os.system(f"mv {os.path.join(os.path.join(args['working_dir'], dataset_name), '*.png')} {output_path} 2> /dev/null")
+    os.system(f"mv {os.path.join(os.path.join(args['working_dir'], dataset_name), '*.PNG')} {output_path} 2> /dev/null")
+
+print(f'INFO: Dataset copied  to {output_path}')
