@@ -32,7 +32,7 @@ if __name__ == '__main__':
                     help="Download only annotations",
                     action='store_true')
     ap.add_argument("-sp", "--only-split",
-                    help="Assuming datasets are stored in working dir, only split datasets",
+                    help="Assuming datasets are stored in working dir, only split datasets, avoid downloading from labelbox",
                     action='store_true')
     ap.add_argument("-lr", "--label-remap",
                     help="Remap labels to other predefined categories in configuration",
